@@ -24,8 +24,8 @@ Module that define the core logic of GMIC
 import torch
 import torch.nn as nn
 import numpy as np
-from Global_local_framework_2.src.utilities import tools
-import Global_local_framework_2.src.modeling.modules as m
+from src.utilities import tools
+import src.modeling.modules as m
 from torchcam.methods import SmoothGradCAMpp, CAM, ScoreCAM, GradCAM, GradCAMpp, XGradCAM, LayerCAM, SSCAM, ISCAM
 
 
