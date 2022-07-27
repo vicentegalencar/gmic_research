@@ -1,0 +1,17 @@
+,name,label
+0,cancer/1_R-CC.png,1
+1,cancer/3_L-MLO.png,1
+2,cancer/1_R-MLO.png,1
+3,cancer/3_L-CC.png,1
+4,normal/0_R-MLO.png,0
+5,normal/3_R-MLO.png,0
+6,normal/2_R-MLO.png,0
+7,normal/0_R-CC.png,0
+8,normal/1_L-CC.png,0
+9,normal/0_L-CC.png,0
+10,normal/2_R-CC.png,0
+11,normal/3_R-CC.png,0
+12,normal/1_L-MLO.png,0
+13,normal/0_L-MLO.png,0
+14,normal/2_L-CC.png,0
+15,normal/2_L-MLO.png,0
