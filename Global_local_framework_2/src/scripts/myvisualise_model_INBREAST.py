@@ -1008,12 +1008,12 @@ if __name__ == '__main__':
     if device_type == 'gpu' and torch.has_cudnn:
         device = torch.device("cuda:{}".format(gpu_id))
         if pretrained_model:
-            #model.load_state_dict(torch.load(model_path), strict=False)
+            model.load_state_dict(torch.load(model_path), strict=False)
             
-            model.load_state_dict(torch.load(model_path)['model_state_dict'], strict=True)
-        else:
             # model.load_state_dict(torch.load(model_path)['model_state_dict'], strict=True)
-            pass
+        else:
+            model.load_state_dict(torch.load(model_path)['model_state_dict'], strict=True)
+            # pass
             
         
     else:
