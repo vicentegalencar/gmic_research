@@ -18,7 +18,7 @@ from PIL import Image
 import pdb
 import torch.nn.functional as F
 import torchvision.ops.boxes as bops
-from src.data_loading.datasets import get_dataloaderVINDR
+from src.data_loading.datasets import get_dataloaderINBREAST
 
 from torchcam.methods import SmoothGradCAMpp, CAM, ScoreCAM, GradCAM, GradCAMpp, XGradCAM, LayerCAM, SSCAM, ISCAM
 
@@ -85,94 +85,6 @@ def test_net(model, loader, device, threshold, output_path, model_path):
     print('threshold: %.2f --- TP: %d --- FN: %d --- TN: %d --- FP: %d'%(threshold, TP, FN, TN, FP))
     print('acc: %f --- roc_auc: %f --- sensitivity: %f --- specificity: %f'%(acc, roc_auc, sensitivity, specificity))
 
-def visualize_example_git(input_img, saliency_maps, true_segs,
-                      patch_locations, patch_img, patch_attentions,
-                      save_dir, parameters):
-    """
-    Function that visualizes the saliency maps for an example
-    """
-    # colormap lists
-    _, _, h, w = saliency_maps.shape
-    #_, _, H, W = input_img.shape
-    H, W = input_img.shape
-    # convert tensor to numpy array
-    # input_img = input_img.data.cpu().numpy()
-
-    # set up colormaps for benign and malignant
-    alphas = np.abs(np.linspace(0, 0.95, 259))
-    alpha_green = plt.cm.get_cmap('Greens')
-    alpha_green._init()
-    alpha_green._lut[:, -1] = alphas
-    alpha_red = plt.cm.get_cmap('Reds')
-    alpha_red._init()
-    alpha_red._lut[:, -1] = alphas
-
-    # create visualization template
-    total_num_subplots = 4 + parameters["K"]
-    figure = plt.figure(figsize=(30, 3))
-    # input image + segmentation map
-    subfigure = figure.add_subplot(1, total_num_subplots, 1)
-    #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    benign_seg, malignant_seg = true_segs
-    if benign_seg is not None:
-        cm.Greens.set_under('w', alpha=0)
-        subfigure.imshow(benign_seg, alpha=0.85, cmap=cm.Greens, clim=[0.9, 1])
-    if malignant_seg is not None:
-        cm.OrRd.set_under('w', alpha=0)
-        subfigure.imshow(malignant_seg, alpha=0.85, cmap=cm.OrRd, clim=[0.9, 1])
-    subfigure.set_title("input image")
-    subfigure.axis('off')
-
-    # patch map
-    subfigure = figure.add_subplot(1, total_num_subplots, 2)
-    #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    cm.YlGnBu.set_under('w', alpha=0)
-    crop_mask = tools.get_crop_mask(
-        patch_locations[0, np.arange(parameters["K"]), :],
-        parameters["crop_shape"], (H, W),
-        "upper_left")
-    subfigure.imshow(crop_mask, alpha=0.7, cmap=cm.YlGnBu, clim=[0.9, 1])
-    if benign_seg is not None:
-        cm.Greens.set_under('w', alpha=0)
-        subfigure.imshow(benign_seg, alpha=0.85, cmap=cm.Greens, clim=[0.9, 1])
-    if malignant_seg is not None:
-        cm.OrRd.set_under('w', alpha=0)
-        subfigure.imshow(malignant_seg, alpha=0.85, cmap=cm.OrRd, clim=[0.9, 1])
-    subfigure.set_title("patch map")
-    subfigure.axis('off')
-
-    # class activation maps
-    subfigure = figure.add_subplot(1, total_num_subplots, 4)
-    #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    resized_cam_malignant = cv2.resize(saliency_maps[0,1,:,:], (W, H))
-    #subfigure.imshow(resized_cam_malignant, cmap=alpha_red, clim=[0.0, 1.0])
-    subfigure.imshow(resized_cam_malignant, cmap=alpha_red, clim=[0.5, 1.0])
-    subfigure.set_title("SM: malignant")
-    subfigure.axis('off')
-
-    subfigure = figure.add_subplot(1, total_num_subplots, 3)
-    #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    resized_cam_benign = cv2.resize(saliency_maps[0,0,:,:], (W, H))
-    #subfigure.imshow(resized_cam_benign, cmap=alpha_green, clim=[0.0, 1.0])
-    subfigure.imshow(resized_cam_benign, cmap=alpha_green, clim=[0.5, 1.0])
-    subfigure.set_title("SM: benign")
-    subfigure.axis('off')
-
-
-    # crops
-    for crop_idx in range(parameters["K"]):
-        subfigure = figure.add_subplot(1, total_num_subplots, 5 + crop_idx)
-        subfigure.imshow(patch_img[0, crop_idx, :, :], cmap='gray', alpha=.8, interpolation='nearest',
-                         aspect='equal')
-        subfigure.axis('off')
-        # crops_attn can be None when we only need the left branch + visualization
-        subfigure.set_title("$\\alpha_{0} = ${1:.2f}".format(crop_idx, patch_attentions[crop_idx]))
-    plt.savefig(save_dir, bbox_inches='tight', format="png", dpi=500)
-    plt.close()
 
 def alter_visualize_example_git(input_img, gt_mask, saliency_maps, true_segs,
                       patch_locations, patch_img, patch_attentions,
@@ -200,7 +112,6 @@ def alter_visualize_example_git(input_img, gt_mask, saliency_maps, true_segs,
     # create visualization template
     #total_num_subplots = 11 + parameters["K"]
     
-    #figure = plt.figure(figsize=(30, 3))
     figure = plt.figure(figsize=(30, 20))
     # input image + segmentation map
     #subfigure = figure.add_subplot(1, total_num_subplots, 1)
@@ -239,16 +150,9 @@ def alter_visualize_example_git(input_img, gt_mask, saliency_maps, true_segs,
         #im2 = cv2.rectangle(im2, (loc[['xmin']],loc['ymin']), (loc['xmax'],loc['ymax']), color, 5)
         im2 = cv2.rectangle(im2, (int(loc[0].item()),int(loc[1].item())), (int(loc[2].item()),int(loc[3].item())), color, 7)
 
-    # import pdb;pdb.set_trace()
     
-    #subfigure.imshow(im2, aspect='equal', cmap='gray')
     subfigure.imshow(im2, aspect='equal')
     
-    # if label_gt==0:
-    #     gt_name = "Malig"
-    # elif label_gt==1:
-    #     gt_name = "Benig"
-    # subfigure.set_title("{}".format(gt_name))
 
     # patch map
     # subfigure = figure.add_subplot(1, total_num_subplots,3)
@@ -454,181 +358,93 @@ def alter_visualize_example_git(input_img, gt_mask, saliency_maps, true_segs,
     subfigure.set_title("infoCAM: benig")
     subfigure.axis('off')
 
-     # class activation maps
-    # subfigure = figure.add_subplot(1, total_num_subplots, 7)
-    # #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    # subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    # #resized_cam_malignant = cv2.resize(saliency_maps[0,1,:,:], (W, H))
-    # resized_cam_benig2 = cv2.resize(alter_cam_ben[0,:,:], (W, H))
-    # #subfigure.imshow(resized_cam_malignant, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.imshow(resized_cam_benig2, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.set_title("altSM: benign")
-    # subfigure.axis('off')
-
-     # class activation maps
-    # subfigure = figure.add_subplot(1, total_num_subplots, 8)
-    # #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    # subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    # #resized_cam_malignant = cv2.resize(saliency_maps[0,1,:,:], (W, H))
-    # resized_gradcam_benig2 = cv2.resize(alter_gradcam_ben[0,:,:], (W, H))
-    # #subfigure.imshow(resized_cam_malignant, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.imshow(resized_gradcam_benig2, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.set_title("altGradSM: benign")
-    # subfigure.axis('off')
-
-    #  # class activation maps
-    # subfigure = figure.add_subplot(1, total_num_subplots, 9)
-    # #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    # subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    # #resized_cam_malignant = cv2.resize(saliency_maps[0,1,:,:], (W, H))
-    # resized_gradcam_malig = cv2.resize(alter_gradcam_malig[0,:,:], (W, H))
-    # #subfigure.imshow(resized_cam_malignant, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.imshow(resized_gradcam_malig, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.set_title("altGradSM: malign")
-    # subfigure.axis('off')
-
-    # #infocam - ben
-    # # pdb.set_trace()
-    # subfigure = figure.add_subplot(1, total_num_subplots, 10)
-    # #subfigure.imshow(input_img[0, 0, :, :], aspect='equal', cmap='gray')
-    # subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    # #resized_cam_malignant = cv2.resize(saliency_maps[0,1,:,:], (W, H))
-    # resized_infocam_ben = cv2.resize(info_cam_ben[0,:,:], (W, H))
-    # resized_infocam_ben_norm = (resized_infocam_ben- resized_infocam_ben.min())/resized_infocam_ben.max()
-    # #subfigure.imshow(resized_cam_malignant, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.imshow(resized_infocam_ben_norm, cmap=alpha_red, clim=[0.0, 1.0])
-    # subfigure.set_title("infoCAM: benig")
-    # subfigure.axis('off')
-
     
-
-    
-
 
     # crops
-    for crop_idx in range(parameters["K"]):
-        # subfigure = figure.add_subplot(1, total_num_subplots, 12 + crop_idx)
-        subfigure = figure.add_subplot(3, 8, 4+crop_idx)
-        subfigure.imshow(patch_img[0, crop_idx, :, :], cmap='gray', alpha=.8, interpolation='nearest',
-                         aspect='equal')
-        subfigure.axis('off')
-        # crops_attn can be None when we only need the left branch + visualization
-        subfigure.set_title("$\\alpha_{0} = ${1:.2f}".format(crop_idx, patch_attentions[crop_idx]))
-    plt.savefig(save_dir, bbox_inches='tight', format="png", dpi=500)
-    plt.close()
+    # for crop_idx in range(parameters["K"]):
+    #     subfigure = figure.add_subplot(3, 8, 4+crop_idx)
+    #     subfigure.imshow(patch_img[0, crop_idx, :, :], cmap='gray', alpha=.8, interpolation='nearest',
+    #                      aspect='equal')
+    #     subfigure.axis('off')
+    #     # crops_attn can be None when we only need the left branch + visualization
+    #     subfigure.set_title("$\\alpha_{0} = ${1:.2f}".format(crop_idx, patch_attentions[crop_idx]))
+    # plt.savefig(save_dir, bbox_inches='tight', format="png", dpi=500)
+    # plt.close()
 
 
     # get contours
-    gt_xmin = gt_ymin = gt_xmax = gt_ymax = 0
-    if loc != None:
-        # (loc[['xmin']],loc['ymin']), (loc['xmax'],loc['ymax']), color, 5)
-        gt_xmin, gt_ymin, gt_xmax, gt_ymax = int(loc[0].item()),int(loc[1].item()), int(loc[2].item()),int(loc[3].item())
-    # result = input_img.copy()
-    # result = cv2.cvtColor(result,cv2.COLOR_GRAY2RGB).astype('uint8')
-    # import pdb; pdb.set_trace()
-    # gray = cv2.cvtColor(resized_cam_malignant_norm, cv2.COLOR_BGR2GRAY)
-
-    # ret,thresh1 = cv2.threshold(resized_cam_malignant_norm,0.5,255,cv2.THRESH_BINARY)
-    # thresh1 = thresh1.astype(np.uint8)
-    # contours = cv2.findContours(thresh1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    # contours = contours[0] if len(contours) == 2 else contours[1]
-    # for cntr in contours:
-    #     x,y,w,h = cv2.boundingRect(cntr)
-    #     cv2.rectangle(result, (x, y), (x+w, y+h), (255, 0, 0), 4)
-    #     cv2.rectangle(result, (gt_xmin,gt_ymin), (gt_xmax, gt_ymax), (0, 255, 0), 4)
-    #     print("x,y,w,h:",x,y,w,h)
-
-
-    figure = plt.figure(figsize=(30, 20))
-    subfigure = figure.add_subplot(2, 6, 1)
-    subfigure.imshow(input_img, aspect='equal', cmap='gray')
-    subfigure.imshow(resized_cam_malignant_norm, cmap=alpha_red, clim=[0.0, 1.0])
-    subfigure.set_title("original: cam_malig")
-    # import pdb; pdb.set_trace()
-
-    #boxes
-    box_gt = torch.tensor([[gt_xmin,gt_ymin, gt_xmax, gt_ymax]], dtype=torch.float)
+    # gt_xmin = gt_ymin = gt_xmax = gt_ymax = 0
+    # if loc != None:
+    #     # (loc[['xmin']],loc['ymin']), (loc['xmax'],loc['ymax']), color, 5)
+    #     gt_xmin, gt_ymin, gt_xmax, gt_ymax = int(loc[0].item()),int(loc[1].item()), int(loc[2].item()),int(loc[3].item())
     
-    thresh_values=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
-    # methods=['cam','gradcam','gradcam++','xgradcam','layercam','infocam']
-    calculate_metrics(box_gt, thresh_values, resized_cam_malignant_norm, dict_results, method='cam')
-    calculate_metrics(box_gt, thresh_values, resized_gradcam_malig_norm, dict_results, method='gradcam')
-    calculate_metrics(box_gt, thresh_values, resized_gradcampp_malig_norm, dict_results, method='gradcam++')
-    calculate_metrics(box_gt, thresh_values, resized_xgradcam_malig_norm, dict_results, method='xgradcam')
-    calculate_metrics(box_gt, thresh_values, resized_layercam_malig_norm, dict_results, method='layercam')
-    calculate_metrics(box_gt, thresh_values, resized_infocam_malig_norm, dict_results, method='infocam')
 
-    #for ii, th in enumerate(thresh_values):
-    for ii, th in enumerate([0.5, 0.6, 0.7, 0.8, 0.9]):
-
-        subfigure = figure.add_subplot(2, 6, ii+2)
-        #subfigure.imshow(resized_cam_malignant_norm>0.5, cmap=alpha_red, clim=[0.0, 1.0])
-        subfigure.imshow(resized_cam_malignant_norm>th, cmap=alpha_red, clim=[0.0, 1.0])
-        #subfigure.set_title("th=0.5")
-        subfigure.set_title(f"th={th}")
-
-        ret,thresh1 = cv2.threshold(resized_cam_malignant_norm,th,255,cv2.THRESH_BINARY)
-        thresh1 = thresh1.astype(np.uint8)
-        contours = cv2.findContours(thresh1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = contours[0] if len(contours) == 2 else contours[1]
-        result = input_img.copy()
-        result = cv2.cvtColor(result,cv2.COLOR_GRAY2RGB).astype('uint8')
-
-        TPS = FPS = 0
-        
-        for cntr in contours:
-            x,y,w,h = cv2.boundingRect(cntr)
-
-            box2 = torch.tensor([[x, y, x+w, y+h]], dtype=torch.float)
-            iou = bops.box_iou(box_gt, box2)
-            #if iou >= th:
-            if iou >= 0.1:
-                TPS += 1
-            else:
-                FPS += 1
-
-            # import pdb; pdb.set_trace()
-            cv2.rectangle(result, (x, y), (x+w, y+h), (255, 0, 0), 6)
-            cv2.rectangle(result, (gt_xmin,gt_ymin), (gt_xmax, gt_ymax), (0, 255, 0), 6)
-            cv2.putText(result, f"{iou.item():.2}", (x, y-4), cv2.FONT_HERSHEY_SIMPLEX, 
-                   3, (255, 0, 0), 5, cv2.LINE_AA)
-            # print("x,y,w,h:",x,y,w,h)
-        subfigure = figure.add_subplot(2, 6, 6+ii+2)
-        # subfigure.imshow(result, cmap='gray')
-        subfigure.imshow(result, aspect='equal')
-        subfigure.set_title(F"tp={TPS}, fp={FPS}")
-
-        # if th==0.5:
-        # dict_results['cam'][th]['tp']+=TPS
-        # dict_results['cam'][th]['fp']+=FPS
-        # if TPS==0:
-        #     dict_results['cam'][th]['fn']+=1
-
-    subfigure = figure.add_subplot(2, 6, 7)
-    # subfigure.imshow(result, cmap='gray')
-    subfigure.imshow(im2, aspect='equal')
-    subfigure.set_title("boxes")
-    plt.savefig(save_dir[:-4]+'esp'+save_dir[-4:], bbox_inches='tight', format="png", dpi=500)
-    plt.close()
-
-    
-    # cam_folder = os.path.join(output_path, 'CAM')
-    # if not os.path.exists(cam_folder):
-    #     os.mkdir(cam_folder)
-    
-    # save_dir_cam = os.path.join(cam_folder, filename)
     # figure = plt.figure(figsize=(30, 20))
-    # plt.imshow(input_img, aspect='equal', cmap='gray')
-    # plt.imshow(resized_cam_malignant_norm, cmap=alpha_red, clim=[0.0, 1.0])
-    # plt.savefig(save_dir_cam, bbox_inches='tight', format="png", dpi=500)
+    # subfigure = figure.add_subplot(2, 6, 1)
+    # subfigure.imshow(input_img, aspect='equal', cmap='gray')
+    # subfigure.imshow(resized_cam_malignant_norm, cmap=alpha_red, clim=[0.0, 1.0])
+    # subfigure.set_title("original: cam_malig")
+    # # import pdb; pdb.set_trace()
+
+    # #boxes
+    # box_gt = torch.tensor([[gt_xmin,gt_ymin, gt_xmax, gt_ymax]], dtype=torch.float)
+    
+    # thresh_values=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+    # # methods=['cam','gradcam','gradcam++','xgradcam','layercam','infocam']
+    # calculate_metrics(box_gt, thresh_values, resized_cam_malignant_norm, dict_results, method='cam')
+    # calculate_metrics(box_gt, thresh_values, resized_gradcam_malig_norm, dict_results, method='gradcam')
+    # calculate_metrics(box_gt, thresh_values, resized_gradcampp_malig_norm, dict_results, method='gradcam++')
+    # calculate_metrics(box_gt, thresh_values, resized_xgradcam_malig_norm, dict_results, method='xgradcam')
+    # calculate_metrics(box_gt, thresh_values, resized_layercam_malig_norm, dict_results, method='layercam')
+    # calculate_metrics(box_gt, thresh_values, resized_infocam_malig_norm, dict_results, method='infocam')
+
+    # #for ii, th in enumerate(thresh_values):
+    # for ii, th in enumerate([0.5, 0.6, 0.7, 0.8, 0.9]):
+
+    #     subfigure = figure.add_subplot(2, 6, ii+2)
+    #     #subfigure.imshow(resized_cam_malignant_norm>0.5, cmap=alpha_red, clim=[0.0, 1.0])
+    #     subfigure.imshow(resized_cam_malignant_norm>th, cmap=alpha_red, clim=[0.0, 1.0])
+    #     #subfigure.set_title("th=0.5")
+    #     subfigure.set_title(f"th={th}")
+
+    #     ret,thresh1 = cv2.threshold(resized_cam_malignant_norm,th,255,cv2.THRESH_BINARY)
+    #     thresh1 = thresh1.astype(np.uint8)
+    #     contours = cv2.findContours(thresh1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #     contours = contours[0] if len(contours) == 2 else contours[1]
+    #     result = input_img.copy()
+    #     result = cv2.cvtColor(result,cv2.COLOR_GRAY2RGB).astype('uint8')
+
+    #     TPS = FPS = 0
+        
+    #     for cntr in contours:
+    #         x,y,w,h = cv2.boundingRect(cntr)
+
+    #         box2 = torch.tensor([[x, y, x+w, y+h]], dtype=torch.float)
+    #         iou = bops.box_iou(box_gt, box2)
+    #         #if iou >= th:
+    #         if iou >= 0.1:
+    #             TPS += 1
+    #         else:
+    #             FPS += 1
+
+    #         # import pdb; pdb.set_trace()
+    #         cv2.rectangle(result, (x, y), (x+w, y+h), (255, 0, 0), 6)
+    #         cv2.rectangle(result, (gt_xmin,gt_ymin), (gt_xmax, gt_ymax), (0, 255, 0), 6)
+    #         cv2.putText(result, f"{iou.item():.2}", (x, y-4), cv2.FONT_HERSHEY_SIMPLEX, 
+    #                3, (255, 0, 0), 5, cv2.LINE_AA)
+    #         # print("x,y,w,h:",x,y,w,h)
+    #     subfigure = figure.add_subplot(2, 6, 6+ii+2)
+    #     # subfigure.imshow(result, cmap='gray')
+    #     subfigure.imshow(result, aspect='equal')
+    #     subfigure.set_title(F"tp={TPS}, fp={FPS}")
+
+    # subfigure = figure.add_subplot(2, 6, 7)
+    # # subfigure.imshow(result, cmap='gray')
+    # subfigure.imshow(im2, aspect='equal')
+    # subfigure.set_title("boxes")
+    # plt.savefig(save_dir[:-4]+'esp'+save_dir[-4:], bbox_inches='tight', format="png", dpi=500)
     # plt.close()
-    # save_dir_cam = os.path.join(cam_folder, filename[:-4]+'_gt'+filename[-4:])
-    # im2 = input_img.copy()
-    # im2 = cv2.rectangle(im2, (int(loc[0].item()),int(loc[1].item())), (int(loc[2].item()),int(loc[3].item())), color, 5)
-    # cv2.imwrite(save_dir_cam, im2)
-    # save_dir_cam = os.path.join(cam_folder, filename[:-4]+'_pred'+filename[-4:])
-    # ret,thresh1 = cv2.threshold(resized_cam_malignant_norm,0.5,255,cv2.THRESH_BINARY)
-    # cv2.imwrite(save_dir_cam, thresh1)
+
     
 #def visualize_saliency_patch_maps(model, output_path, loader, device, test_filename, mask_dir, mode):
 #def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir, mode):
@@ -648,15 +464,9 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
     for step, (imgs, labels, test_filename, loc) in enumerate(loader):
         imgs, labels = imgs.to(device), labels.to(device)
 
-        # if step>0:
-        #     break
-        # # import pdb; pdb.set_trace()
+        
         model.eval()
-        # model.train()
-        # import pdb;pdb.set_trace()
-        # gradcam_extractor = ScoreCAM(model, target_layer='ds_net.relu') #GradCAM
-        # gradcam_extractor = ScoreCAM(model, target_layer='ds_net.layer_list.4') #GradCAM
-        #gradcam_extractor = GradCAM(model, target_layer='ds_net.relu')
+        
 
         #GradCam++
         gradcampp_extractor = GradCAMpp(model, target_layer='ds_net.relu') # [works fine]
@@ -669,10 +479,7 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
 
         # GradCam
         gradcam__extractor = GradCAM(model, target_layer='ds_net.relu') # [works fine]
-        #gradcam__extractor = GradCAM(model, target_layer='left_postprocess_net.gn_conv_last') # [works fine]
-        # gradcam__extractor = GradCAM(model, target_layer='ds_net.layer_list.4') # [works fine]
-
-
+        
         #SmoothGradCAMpp
         # gradcampp_extractor = SmoothGradCAMpp(model, target_layer='ds_net.relu')  # [Failed]
 
@@ -682,11 +489,9 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
         # xgradcam_extractor = XGradCAM(model, target_layer='ds_net.layer_list.4')  # [works fine]
 
         #LayerCam
-        #extractor = LayerCAM(model, target_layer='ds_net.relu')
         layercam_extractor = LayerCAM(model, target_layer=['ds_net.layer_list.4','ds_net.layer_list.3']) # [works fine, but need to change extractor]
         # layercam_extractor = LayerCAM(model, target_layer=['dn_resnet.layer4','dn_resnet.layer3']) # [works fine, but need to change extractor]
 
-        # gradcam_extractor = GradCAMpp(model, target_layer='ds_net.layer4',input_shape= (3, 2944, 1920))
 
         #GradCAMpp
         # cam_extractor = CAM(model, target_layer='ds_net.layer_list.4')
@@ -697,28 +502,10 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
         cam_extractor = CAM(model, fc_layer='left_postprocess_net.gn_conv_last',target_layer='ds_net.relu')  # [works fine]
         # cam_extractor = CAM(model, fc_layer='left_postprocess_net.gn_conv_last',target_layer='left_postprocess_net.gn_conv_last')  # [works fine]
 
-        #ScoreCAM
-        #cam_extractor = ScoreCAM(model, target_layer='ds_net.layer_list.4')  # [failed]
-
-        # SSCAM
-        #cam_extractor = SSCAM(model, target_layer='ds_net.relu')  # [failed]
-
-        #ISCAM      
-        # cam_extractor = ISCAM(model, target_layer='ds_net.relu')  # [failed]
-
-        # cam_extractor = CAM(model, fc_layer='left_postprocess_net.gn_conv_last',target_layer='ds_net.layer4',input_shape= (3, 2944, 1920))
-        #ds_net.relu
-        # cam_extractor = CAM(model, fc_layer='left_postprocess_net.gn_conv_last',target_layer='ds_net.layer4',input_shape= (3, 2944, 1920))
-        # cam_extractor = CAM(model, input_shape= (3, 2944, 1920))
-
-        # model.zero_grad()
+        
         y_global, y_local, y_fusion, saliency_map, y_score, last_feature_map = model(imgs)
 
 
-        # import pdb; pdb.set_trace()
-        # with torch.no_grad(): y_global, y_local, y_fusion, saliency_map = model(imgs)
-        #cam_extractor = SmoothGradCAMpp(model)
-        #ds_net.layer_list.4/  ds_net.final_bn/ ds_net.relu
        
         # cam_extractor = CAM(model, fc_layer='left_postprocess_net.gn_conv_last')
         saliency_maps = model.saliency_map.data.cpu().numpy()
@@ -763,9 +550,6 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
         for i in range(batch_size):
         # save_dir = os.path.join("visualization", "{0}.png".format(short_file_path))
 
-            # temporary
-            # if i==2:
-            #     break
             # possui massa
             if labels[i].item()==1:
 
@@ -907,22 +691,21 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
                         dict_results)
 
     
-    for m in methods:
-        # dict_results[m]={}
-        for t in thresh_values:
-            #dict_results[m][t]={'tp':0, 'fp':0, 'tn':0, 'tpr':0, 'fppi':0}
-            dict_results[m][t]['tpr']=dict_results[m][t]['tp']/(dict_results[m][t]['tp']+dict_results[m][t]['fn'])
-            dict_results[m][t]['fppi']=dict_results[m][t]['fp']/dict_results['total_mass']
-    print(dict_results)
-    file_results = open(os.path.join(output_path,'metrics.txt'),'w')
-    file_results.write(f"Total Mass Images: {dict_results['total_mass']}\n\n")
-    for m in methods:
-        file_results.write(f"{m}:\n")
-        for t in thresh_values:
-            file_results.write(f"\tth = {t}\n")
-            file_results.write(F"\t\tTP = {dict_results[m][t]['tp']}\tFP={dict_results[m][t]['fp']}\tFN={dict_results[m][t]['fn']}\tTPR = {dict_results[m][t]['tpr']}\tFPPI={dict_results[m][t]['fppi']}\n")
-            # file_results.write(f"\tTPR = {dict_results[m][t]['tpr']}\tFPPI={dict_results[m][t]['fppi']}\n\n")
-    file_results.close()
+    # for m in methods:
+    #     # dict_results[m]={}
+    #     for t in thresh_values:
+    #         #dict_results[m][t]={'tp':0, 'fp':0, 'tn':0, 'tpr':0, 'fppi':0}
+    #         dict_results[m][t]['tpr']=dict_results[m][t]['tp']/(dict_results[m][t]['tp']+dict_results[m][t]['fn'])
+    #         dict_results[m][t]['fppi']=dict_results[m][t]['fp']/dict_results['total_mass']
+    # print(dict_results)
+    # file_results = open(os.path.join(output_path,'metrics.txt'),'w')
+    # file_results.write(f"Total Mass Images: {dict_results['total_mass']}\n\n")
+    # for m in methods:
+    #     file_results.write(f"{m}:\n")
+    #     for t in thresh_values:
+    #         file_results.write(f"\tth = {t}\n")
+    #         file_results.write(F"\t\tTP = {dict_results[m][t]['tp']}\tFP={dict_results[m][t]['fp']}\tFN={dict_results[m][t]['fn']}\tTPR = {dict_results[m][t]['tpr']}\tFPPI={dict_results[m][t]['fppi']}\n")
+    # file_results.close()
         
 
              
@@ -1016,14 +799,14 @@ if __name__ == '__main__':
             # pass
             
         
-    else:
-        if pretrained_model:
-            #model.load_state_dict(torch.load(model_path, map_location="cpu"), strict=False)
-            model.load_state_dict(torch.load(model_path, map_location="cpu"), strict=True)
-        else:
-            # model.load_state_dict(torch.load((model_path)['model_state_dict'],  map_location="cpu"), strict=True)
-            pass
-        device = torch.device("cpu")
+    # else:
+    #     if pretrained_model:
+    #         #model.load_state_dict(torch.load(model_path, map_location="cpu"), strict=False)
+    #         model.load_state_dict(torch.load(model_path, map_location="cpu"), strict=True)
+    #     else:
+    #         # model.load_state_dict(torch.load((model_path)['model_state_dict'],  map_location="cpu"), strict=True)
+    #         pass
+    #     device = torch.device("cpu")
     model = model.to(device)
     # model = torch.nn.DataParallel(model)
 
@@ -1032,44 +815,9 @@ if __name__ == '__main__':
     # test_loader = get_dataloader(os.path.join(DATA_PATH, 'test'), Test_data, image_size=img_size, batch_size=batch_size, shuffle=False, \
     #     max_value=max_value)
     #test_loader = get_dataloaderCBIS(os.path.join(DATA_PATH, 'test'), image_size=img_size, batch_size=batch_size, shuffle=False, max_value=max_value, aug=aug)
-    test_loader = get_dataloaderVINDR(DATA_PATH, 'test', image_size=img_size, batch_size=batch_size, shuffle=False, max_value=max_value, aug=aug, num_chan=args['num_chan'])
+    test_loader = get_dataloaderINBREAST(DATA_PATH, 'test', image_size=img_size, batch_size=batch_size, shuffle=False, max_value=max_value, aug=aug, num_chan=args['num_chan'])
     
-    #just debugging
-    # for step, (imgs, labels, test_filename) in enumerate(test_loader):
-    #     debug_img = imgs[0]
-
-    #     # filename = test_filename[i]
-    #     #filename = filename[filename.find('/')+1:filename.find('.')]
-    #     # filename = filename.split('/')[-1]
-    #     #save_dir = os.path.join(output_path, "{}.png".format(filename))
-    #     debug_img = debug_img.permute((1,2,0))
-    #     # debug_img = debug_img / 2 + 0.5
-    #     # import pdb; pdb.set_trace()
-    #     # debug_img = debug_img.cpu().numpy()
-    #     # # debug_img -= np.mean(debug_img)
-    #     # debug_img = (debug_img *np.std(debug_img) ) + np.mean(debug_img)
-    #     save_dir_debug = oxs.path.join(args['output_path'] , 'debug_img.png')
-
-    #     plt.imshow(debug_img[:,:,0], aspect='equal', cmap='gray')
-    #     # plt.imshow(debug_img)
-    #     plt.savefig(save_dir_debug, bbox_inches='tight', format="png", dpi=500)
-    #     plt.close()
-    #     break
-
     
-    # import pdb; pdb.set_trace()
-    # test_filename = test_loader.dataset.lines
-    
-    # visuaize segmentation maps
-    # if not args['mammo_sample_data']:
-    #     mask_dir = "data/sample_data/segmentation"
-    #     output_path = 'visualization'
-    # else:
-    #     mask_dir = args('mask_dir')
-    #     output_path = args('output_path')
-
-    # output_path = os.path.join(args['data_path'].split('/')[:-1])
-   # output_path = args('output_path')
     output_path = args['output_path'] 
 
 

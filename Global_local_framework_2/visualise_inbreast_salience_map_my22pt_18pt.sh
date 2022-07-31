@@ -8,7 +8,7 @@ export PYTHONPATH=$PYTHONPATH:"/content/gmic_research/Global_local_framework_2/"
 
 python src/scripts/myvisualise_model_INBREAST.py \
 --model_path="models/sample_model_1.p" \
---data_path="sample_Data" \
+--data_path="/content/drive/MyDrive/PNG_MASKS" \
 --mask_dir="checkpoints/inbreast/segmentation/masks" \
 --output_path="checkpoints/inbreast/segmentation" \
 --bs=4 \

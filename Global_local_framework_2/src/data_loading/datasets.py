@@ -272,6 +272,137 @@ class VINDR(Dataset):
             img = transform1(img, self.imgsize, type=self.data_type)
         return img, label, filepath, location
 
+class INBREAST(Dataset):
+    def __init__(self, root, data_type, image_size, max_value, aug, num_chan):
+        self.root = root
+        
+        self.data_type = data_type
+        self.imgsize = image_size
+        self.max_value = max_value
+        self.aug = aug
+        self.num_chan = num_chan
+        
+        if data_type == 'train' or data_type == 'validate':
+            
+            # df = pd.read_csv(os.path.join(root,"balanced_mass_nof.csv"))
+            # df = df[df.fold == "training"]
+
+            # img_paths = []
+            # targets = []
+            # locations = []
+            # for _, row in df.iterrows(): 
+            #     study_id = row.study_id
+            #     image_id = row.image_id
+
+            #     xmin = row.xmin
+            #     ymin = row.ymin
+            #     xmax = row.xmax
+            #     ymax = row.ymax
+
+            #     img_path = f"images/{study_id}/{image_id}_pre.png"
+            #     img_paths.append(img_path)
+                
+            #     #if 'Mass' in clas:
+            #     if 'Mass' in row.finding_categories:
+            #         targets.append(1)
+            #         locations.append({'xmin':int(xmin), 'ymin':int(ymin), 'xmax':int(xmax), 'ymax':int(ymax)})
+            #     #elif 'No Finding' in clas:
+            #     elif 'No Finding' in row.finding_categories:
+            #         targets.append(0)
+                    
+            #         locations.append({'xmin':-1, 'ymin':-1, 'xmax':-1, 'ymax':-1})
+            
+            # self.img_path = [os.path.join(root,x) for x in img_paths]
+            # self.labels = targets
+            # self.locations = locations
+
+            ##vicente's code
+            df = pd.read_csv(os.path.join(root,"TrainDataset.csv"))
+            img_paths = df["Img_File_Name"].values   
+            mask_paths = df["Mask_File_Name"].values
+            targets = df["Mass_Type"].values
+            
+            self.img_path = [os.path.join(root,"TrainDataset","full",x) for x in img_paths] 
+            self.mask_path = [os.path.join(root,"TrainDataset","masks",x) for x in mask_paths]
+            self.labels = targets
+            self.locations = None
+            #end vicentes code
+            
+
+
+        elif data_type == 'test':
+            # df = pd.read_csv(os.path.join(root,"balanced_mass_nof.csv"))
+            # df = df[df.fold == "test"]
+            # img_paths = []
+            # targets = []
+            # locations = []
+            # for _, row in df.iterrows(): 
+            #     study_id = row.study_id
+            #     image_id = row.image_id
+
+            #     xmin = row.xmin
+            #     ymin = row.ymin
+            #     xmax = row.xmax
+            #     ymax = row.ymax
+
+            #     img_path = f"images/{study_id}/{image_id}_pre.png"
+            #     img_paths.append(img_path)
+            #     #for clas in row.finding_categories:
+            #     if 'Mass' in row.finding_categories:
+            #         targets.append(1)
+            #         locations.append({'xmin':int(xmin), 'ymin':int(ymin), 'xmax':int(xmax), 'ymax':int(ymax)})
+            #     #elif 'No Finding' in clas:
+            #     elif 'No Finding' in row.finding_categories:
+            #         targets.append(0)
+            #         # locations.append(None)
+            #         locations.append({'xmin':-1, 'ymin':-1, 'xmax':-1, 'ymax':-1})
+
+            # self.img_path = [os.path.join(root,x) for x in img_paths]
+            # self.labels = targets
+            # self.locations = locations
+
+            #vicente's code
+            df = pd.read_csv(os.path.join(root,"TestDataset.csv"))
+            img_paths = df["Img_File_Name"].values 
+            mask_paths = df["Mask_File_Name"].values
+            targets = df["Mass_Type"].values
+            
+            self.img_path = [os.path.join(root,"TestDataset","full",x) for x in img_paths]  
+            self.mask_path = [os.path.join(root,"TestDataset","masks",x) for x in mask_paths]
+            self.labels = targets
+            self.locations = None
+            #end vicente's code
+        
+    def __len__(self):
+        #return len(self.lines)
+        return len( self.img_path)
+
+    def __getitem__(self, idx):
+       
+        filepath = self.img_path[idx]
+        label = self.labels[idx]
+        label = torch.tensor([int(label)], dtype=torch.float32)
+        
+        if self.num_chan ==1:
+            img = np.array(Image.open(filepath), dtype=np.float32)
+        else:
+            img = np.array(Image.open(filepath).convert('RGB'), dtype=np.float32)
+
+        location = self.locations[idx]
+        
+        # scale = (img.shape[0]/self.imgsize[0], img.shape[1]/self.imgsize[1])
+        # if location !=None:
+        #     location['xmin'] /= scale[1]
+        #     location['xmax'] /= scale[1]
+        #     location['ymin'] /= scale[0]
+        #     location['ymax'] /= scale[0]
+
+        if self.aug:
+            img = transform(img, self.imgsize, self.max_value, type=self.data_type)
+        else:
+            img = transform1(img, self.imgsize, type=self.data_type)
+        return img, label, filepath, location
+
 def get_dataloader(datapth, csv_path, image_size, batch_size, shuffle, max_value, aug):
     return DataLoader(
         Mammo(datapth, csv_path, image_size, max_value, aug),
@@ -291,6 +422,14 @@ def get_dataloaderCBIS(datapth, data_type, image_size, batch_size, shuffle, max_
 def get_dataloaderVINDR(datapth, data_type, image_size, batch_size, shuffle, max_value, aug, num_chan):
     return DataLoader(
         VINDR(datapth, data_type, image_size, max_value, aug, num_chan ),
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=4,
+    )
+
+def get_dataloaderINBREAST(datapth, data_type, image_size, batch_size, shuffle, max_value, aug, num_chan):
+    return DataLoader(
+        INBREAST(datapth, data_type, image_size, max_value, aug, num_chan ),
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=4,
