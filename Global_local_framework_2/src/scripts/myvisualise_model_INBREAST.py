@@ -361,15 +361,15 @@ def alter_visualize_example_git(input_img, gt_mask, saliency_maps, true_segs,
     
 
     # crops
-    # for crop_idx in range(parameters["K"]):
-    #     subfigure = figure.add_subplot(3, 8, 4+crop_idx)
-    #     subfigure.imshow(patch_img[0, crop_idx, :, :], cmap='gray', alpha=.8, interpolation='nearest',
-    #                      aspect='equal')
-    #     subfigure.axis('off')
-    #     # crops_attn can be None when we only need the left branch + visualization
-    #     subfigure.set_title("$\\alpha_{0} = ${1:.2f}".format(crop_idx, patch_attentions[crop_idx]))
-    # plt.savefig(save_dir, bbox_inches='tight', format="png", dpi=500)
-    # plt.close()
+    for crop_idx in range(parameters["K"]):
+        subfigure = figure.add_subplot(3, 8, 4+crop_idx)
+        subfigure.imshow(patch_img[0, crop_idx, :, :], cmap='gray', alpha=.8, interpolation='nearest',
+                         aspect='equal')
+        subfigure.axis('off')
+        # crops_attn can be None when we only need the left branch + visualization
+        subfigure.set_title("$\\alpha_{0} = ${1:.2f}".format(crop_idx, patch_attentions[crop_idx]))
+    plt.savefig(save_dir, bbox_inches='tight', format="png", dpi=500)
+    plt.close()
 
 
     # get contours
