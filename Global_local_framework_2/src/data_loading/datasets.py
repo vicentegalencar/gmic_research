@@ -388,7 +388,8 @@ class INBREAST(Dataset):
         else:
             img = np.array(Image.open(filepath).convert('RGB'), dtype=np.float32)
 
-        location = self.locations[idx]
+        #location = self.locations[idx]
+        location = None
         
         # scale = (img.shape[0]/self.imgsize[0], img.shape[1]/self.imgsize[1])
         # if location !=None:
