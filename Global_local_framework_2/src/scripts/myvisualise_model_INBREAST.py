@@ -461,7 +461,8 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
         for t in thresh_values:
             dict_results[m][t]={'tp':0, 'fp':0, 'fn':0, 'tpr':0, 'fppi':0}
     
-    for step, (imgs, labels, test_filename, loc) in enumerate(loader):
+    #for step, (imgs, labels, test_filename, loc) in enumerate(loader):
+    for step, (imgs, labels, test_filename) in enumerate(loader):
         imgs, labels = imgs.to(device), labels.to(device)
 
         
@@ -687,7 +688,7 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
                 alter_visualize_example_git(img, gt_mask, saliency_maps[i:i+1,:,:,:], [benign_seg, malignant_seg],
                         patch_locations[i:i+1,:,:], patch_imgs[i:i+1,:,:,:], patch_attentions[i],
                         save_dir, output_path, filename, parameters, alter_cam_ben, alter_cam_malig, gradcam_ben,gradcam_malig, gradcampp_ben,gradcampp_malig,
-                        xgradcam_ben, xgradcam_malig, layercam_ben, layercam_malig , info_cam_ben, info_cam_malig, y_fusion[i], labels[i], (loc['xmin'][i],loc['ymin'][i],loc['xmax'][i],loc['ymax'][i]), 
+                        xgradcam_ben, xgradcam_malig, layercam_ben, layercam_malig , info_cam_ben, info_cam_malig, y_fusion[i], labels[i], None, 
                         dict_results)
 
     

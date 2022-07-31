@@ -389,7 +389,7 @@ class INBREAST(Dataset):
             img = np.array(Image.open(filepath).convert('RGB'), dtype=np.float32)
 
         #location = self.locations[idx]
-        location = None
+        # location = None
         
         # scale = (img.shape[0]/self.imgsize[0], img.shape[1]/self.imgsize[1])
         # if location !=None:
@@ -402,7 +402,8 @@ class INBREAST(Dataset):
             img = transform(img, self.imgsize, self.max_value, type=self.data_type)
         else:
             img = transform1(img, self.imgsize, type=self.data_type)
-        return img, label, filepath, location
+        #return img, label, filepath, location
+        return img, label, filepath
 
 def get_dataloader(datapth, csv_path, image_size, batch_size, shuffle, max_value, aug):
     return DataLoader(
