@@ -7,7 +7,7 @@ from src.modeling import gmic
 from src.utilities.metric import compute_metric
 #from src.data_loading.datasets import get_dataloader
 from src.data_loading.datasets import get_dataloaderINBREAST
-from src.scripts.one_epoch import running_one_epoch, save_epoch
+from src.scripts.one_epoch import running_one_epoch_inbreast, save_epoch
 
 def train_net(net, output_path, epochs, image_size, batch_size, optimizer, lr_scheduler, datapath, device, threshold, writer, \
     beta, lr_rate, max_value, aug, num_chan, cam_method):
@@ -29,7 +29,7 @@ def train_net(net, output_path, epochs, image_size, batch_size, optimizer, lr_sc
     valid_acc = []
     criterion = torch.nn.BCELoss().cuda()
     for epoch in range(epochs):
-        lr = running_one_epoch(epoch, output_path, net, train_loader, val_loader, criterion, optimizer, device, threshold, beta, train_loss, train_acc, \
+        lr = running_one_epoch_inbreast(epoch, output_path, net, train_loader, val_loader, criterion, optimizer, device, threshold, beta, train_loss, train_acc, \
         valid_loss, valid_acc, writer, cam_method)
         if lr > float(lr_rate)/10:
             lr_scheduler.step()
