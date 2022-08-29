@@ -282,7 +282,7 @@ class INBREAST(Dataset):
         self.aug = aug
         self.num_chan = num_chan
         
-        if data_type == 'train' or data_type == 'validate':
+        if data_type == 'train' :
             
             # df = pd.read_csv(os.path.join(root,"balanced_mass_nof.csv"))
             # df = df[df.fold == "training"]
@@ -330,7 +330,7 @@ class INBREAST(Dataset):
             
 
 
-        elif data_type == 'test':
+        elif data_type == 'test' or data_type == 'validate':
             # df = pd.read_csv(os.path.join(root,"balanced_mass_nof.csv"))
             # df = df[df.fold == "test"]
             # img_paths = []
