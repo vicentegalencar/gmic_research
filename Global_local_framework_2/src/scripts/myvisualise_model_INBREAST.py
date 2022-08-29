@@ -591,7 +591,7 @@ def visualize_saliency_patch_maps(model, output_path, loader, device, mask_dir):
                 
                 #img = np.array(Image.open(test_filename[i]), dtype=np.float32)
                 img = Image.open(test_filename[i])
-                gt_path = test_filename[i].replace("full","maks")
+                gt_path = test_filename[i].replace("full","masks")
                 gt_path = gt_path[:-4] +".xml.png"
 
                 gt_mask = Image.open(gt_path)
