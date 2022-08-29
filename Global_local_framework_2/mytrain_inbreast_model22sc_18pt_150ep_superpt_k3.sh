@@ -2,11 +2,11 @@
 
 #cd "Global_local_framework_2/"
 #cd "/media/hdd/filipe/codes/gmic_mdpp-master/Global_local_framework_2/"
-cd "/media/hdd/filipe/codes/gmic_mdpp-master/Global_local_framework_2"
+cd "/media/hdd/filipe/codes/gmic_research/Global_local_framework_2"
 
 #export PYTHONPATH=$PYTHONPATH:"Validate_and_Improve_Breast_Cancer_AI_Approach/Global_local_framework_2/"
 #export PYTHONPATH=$PYTHONPATH:"/media/hdd/filipe/codes/gmic_mdpp-master/"
-export PYTHONPATH=$PYTHONPATH:"/media/hdd/filipe/codes/gmic_mdpp-master/"
+export PYTHONPATH=$PYTHONPATH:"/media/hdd/filipe/codes/gmic_research/"
 
 python src/scripts/mytrain_inbreast.py \
 --save_model_path="checkpoints/inbreast_rn22pt_rn18pt_ep50_superpt_k3_cam" \
