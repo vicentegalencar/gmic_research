@@ -6,19 +6,22 @@ import matplotlib.pyplot as plt
 from src.modeling import gmic
 from src.utilities.metric import compute_metric
 #from src.data_loading.datasets import get_dataloader
-from src.data_loading.datasets import get_dataloaderVINDR
+from src.data_loading.datasets import get_dataloaderINBREAST
 from src.scripts.one_epoch import running_one_epoch, save_epoch
 
 def train_net(net, output_path, epochs, image_size, batch_size, optimizer, lr_scheduler, datapath, device, threshold, writer, \
-    beta, lr_rate, max_value, aug, num_chan):
+    beta, lr_rate, max_value, aug, num_chan, cam_method):
     # dataloader
     #train_loader = get_dataloaderCBIS(datapath, 'train', image_size=image_size, batch_size=batch_size, shuffle=True, max_value=max_value, aug=aug, num_chan=num_chan)
-    train_loader = get_dataloaderVINDR(datapath, 'train', image_size=image_size, batch_size=batch_size, shuffle=True, max_value=max_value, aug=aug, num_chan=num_chan)
+    # train_loader = get_dataloaderVINDR(datapath, 'train', image_size=image_size, batch_size=batch_size, shuffle=True, max_value=max_value, aug=aug, num_chan=num_chan)
+    train_loader = get_dataloaderINBREAST(datapath, 'train', image_size=img_size, batch_size=batch_size, shuffle=True, max_value=max_value, aug=aug, num_chan=num_chan)
     #val_loader = get_dataloaderCBIS(datapath, 'validate', image_size=image_size, batch_size=10, shuffle=False, max_value=max_value, aug=aug)
     # val_loader = get_dataloaderCBIS(datapath, 'test', image_size=image_size, batch_size=10, shuffle=False, max_value=max_value, aug=False, num_chan=num_chan)
-    val_loader = get_dataloaderVINDR(datapath, 'test', image_size=image_size, batch_size=10, shuffle=False, max_value=max_value, aug=False, num_chan=num_chan)
+    # val_loader = get_dataloaderVINDR(datapath, 'test', image_size=image_size, batch_size=10, shuffle=False, max_value=max_value, aug=False, num_chan=num_chan)
+    val_loader = get_dataloaderINBREAST(datapath, 'test', image_size=img_size, batch_size=batch_size, shuffle=False, max_value=max_value, aug=aug, num_chan=num_chan)
     #test_loader = get_dataloaderCBIS(datapath, 'test', image_size=image_size, batch_size=10, shuffle=False, max_value=max_value, aug=False, num_chan=num_chan)
-    test_loader = get_dataloaderVINDR(datapath, 'test', image_size=image_size, batch_size=10, shuffle=False, max_value=max_value, aug=False, num_chan=num_chan)
+    # test_loader = get_dataloaderVINDR(datapath, 'test', image_size=image_size, batch_size=10, shuffle=False, max_value=max_value, aug=False, num_chan=num_chan)
+    test_loader = get_dataloaderINBREAST(datapath, 'test', image_size=img_size, batch_size=batch_size, shuffle=False, max_value=max_value, aug=aug, num_chan=num_chan)
 
     train_loss = []
     train_acc = []
@@ -27,7 +30,7 @@ def train_net(net, output_path, epochs, image_size, batch_size, optimizer, lr_sc
     criterion = torch.nn.BCELoss().cuda()
     for epoch in range(epochs):
         lr = running_one_epoch(epoch, output_path, net, train_loader, val_loader, criterion, optimizer, device, threshold, beta, train_loss, train_acc, \
-        valid_loss, valid_acc, writer)
+        valid_loss, valid_acc, writer, cam_method)
         if lr > float(lr_rate)/10:
             lr_scheduler.step()
     print('#######################')
@@ -38,7 +41,7 @@ def train_net(net, output_path, epochs, image_size, batch_size, optimizer, lr_sc
     return train_loss, train_acc, valid_loss, valid_acc
 
 @torch.no_grad()
-def test_net(model, loader, device, threshold):
+def test_net(model, loader, device, threshold, cam_method):
     # load val best to test
     model_path = os.path.join(output_path, 'val_best_model.pth')
     model.load_state_dict(torch.load(model_path)['model_state_dict'], strict=True)
@@ -47,7 +50,12 @@ def test_net(model, loader, device, threshold):
     prediction = np.empty(shape=[0, 2], dtype=np.int)
     for step, (imgs, labels, _) in enumerate(loader):
         imgs, labels = imgs.to(device), labels.to(device)
-        y_global, y_local, y_fusion, saliency_map = model(imgs)
+        # y_global, y_local, y_fusion, saliency_map = model(imgs)
+
+        if cam_method == "cam":
+            y_global, y_local, y_fusion, saliency_map, _, _ = model(imgs)
+        elif cam_method == "xgradcam":
+            y_global, y_local, y_fusion, saliency_map, _, _ = model.forward_altercam(imgs,activation='xgradcam')
         
         y_fusion = y_fusion[:,1:]
         
@@ -65,8 +73,8 @@ def test_net(model, loader, device, threshold):
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    # ap.add_argument("--model_path", type=str, default='models/sample_model_1.p',
-    #     help="pretrained model path")
+    ap.add_argument("--model_path", type=str, default='models/sample_model_1.p',
+        help="pretrained model path")
     ap.add_argument("--save_model_path", type=str, default='checkpoints/mymodel_1.pth',
         help="path for saving trained model")
     # ap.add_argument("--train_data_csv", type=str, default='mammo/train.csv', 
@@ -103,14 +111,18 @@ if __name__ == '__main__':
         help="whether to perform pretrain from imagenet")
     ap.add_argument("--num_chan", type=int, default=3,
         help="batch size")
+    ap.add_argument("--K", type=int, default=6,
+        help="parameter K")
+    ap.add_argument("--cam_method", type=str, default="cam",
+        help="class activation method")
     
     
     
     args = vars(ap.parse_args())
     num_works = 4
     
-
-    #pretrained_state_dict = args['model_path']
+    cam_method = args['cam_method']
+    pretrained_state_dict = args['model_path']
     output_path = args['save_model_path']
 
     lr_rate = args['lr']
@@ -153,7 +165,8 @@ if __name__ == '__main__':
         "percent_t": percent_t,
         "cam_size": (46, 30),
         # "cam_size": (92, 60),
-        "K": 6,
+        # "K": 6,
+        "K": args['K'],
         "crop_shape": (256, 256),
         # "use_v1_global":False
         "use_v1_global":use_v1_global,
@@ -170,12 +183,12 @@ if __name__ == '__main__':
     # import pdb;pdb.set_trace()
 
     model = gmic.GMIC(parameters)
-    # model_path = pretrained_state_dict
+    model_path = pretrained_state_dict
     if device_type == 'gpu' and torch.has_cudnn:
-    #     model.load_state_dict(torch.load(model_path), strict=False)
+        model.load_state_dict(torch.load(model_path), strict=False)
         device = torch.device("cuda:{}".format(gpu_id))
     else:
-    #     model.load_state_dict(torch.load(model_path, map_location="cpu"), strict=False)
+        model.load_state_dict(torch.load(model_path, map_location="cpu"), strict=False)
         device = torch.device("cpu")
     model = model.to(device)
 
@@ -189,7 +202,7 @@ if __name__ == '__main__':
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         train_loss, train_acc, valid_loss, valid_acc = train_net(model, output_path, epochs, img_size, batch_size, optimizer, lr_scheduler, \
-            DATA_PATH, device, threshold, writer, beta, lr_rate, max_value,aug,num_chan)
+            DATA_PATH, device, threshold, writer, beta, lr_rate, max_value,aug,num_chan, cam_method)
         # plot training curve
         N = [n+1 for n in range(epochs)]
 
