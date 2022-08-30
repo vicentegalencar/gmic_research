@@ -771,7 +771,8 @@ if __name__ == '__main__':
     pretrained_model = args['pretrained_model']
     use_v1_global = args['v1_global']
         
-    max_value=65535
+    # max_value=65535
+    max_value=255
 
     parameters = {
         "device_type": device_type,
