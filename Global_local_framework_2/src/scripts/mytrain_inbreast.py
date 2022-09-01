@@ -171,7 +171,7 @@ if __name__ == '__main__':
         # "use_v1_global":False
         "use_v1_global":use_v1_global,
         "pretrain_local":pretrain_local,
-        "pretrain_global":pretrain_local,
+        "pretrain_global":pretrain_global,
     }
 
     if use_v1_global:
