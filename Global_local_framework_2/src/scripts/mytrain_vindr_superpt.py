@@ -90,7 +90,9 @@ if __name__ == '__main__':
         help="steps for decreasing learning rate")
     ap.add_argument("--bs", type=int, default=6,
         help="batch size")
-    ap.add_argument("--is", type=int, default=(2944, 1920),
+    # ap.add_argument("--is", type=int, default=(2944, 1920),
+    #     help="image size")
+    ap.add_argument("--is", type=int, default=(1472, 960),
         help="image size")
     ap.add_argument("--beta", type=float, default=3.259162430057801e-06,
         help="beta")
