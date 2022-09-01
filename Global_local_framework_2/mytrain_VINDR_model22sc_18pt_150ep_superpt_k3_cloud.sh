@@ -20,7 +20,7 @@ python src/scripts/mytrain_vindr_superpt.py \
 --percent_t=0.02 \
 --augmentation=True \
 --num_chan=1 \
---gpuid=1  \
+--gpuid=0  \
 --K=3 \
 --cam_method="cam"
 
