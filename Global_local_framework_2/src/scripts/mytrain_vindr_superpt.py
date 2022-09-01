@@ -162,7 +162,8 @@ if __name__ == '__main__':
         "max_crop_size_noise": 100,
         # model related hyper-parameters
         "percent_t": percent_t,
-        "cam_size": (46, 30),
+        # "cam_size": (46, 30),
+        "cam_size": (23,15),
         # "cam_size": (92, 60),
         # "K": 6,
         "K": args['K'],
