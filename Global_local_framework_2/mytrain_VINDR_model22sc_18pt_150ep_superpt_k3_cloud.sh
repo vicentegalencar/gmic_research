@@ -10,7 +10,7 @@ export PYTHONPATH=$PYTHONPATH:"/media/hdd/filipe/codes/gmic_mdpp-master/"
 
 python src/scripts/mytrain_vindr_superpt.py \
 --save_model_path="checkpoints/vindr_rn22pt_rn18pt_ep50_superpt_k3_xgradcam" \
---data_path="/media/hdd/filipe/datasets/vindr-mammo/1.0.0/" \
+--data_path="/media/hdd/filipe/datasets/vindr-mammo_small/" \
 --epochs=50 \
 --lr=4.134478662168656e-05 \
 --lr_step=10 \
